@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mostrador · POS 80 mm</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body data-accent="copper">
+  <div class="scanlines" aria-hidden="true"></div>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">▣</span>
+        <span class="brand-text">MOSTRADOR<small>POS · 80 MM</small></span>
+      </div>
+      <div class="top-store" id="topStore">TORNILLERÍA EL TORNILLO</div>
+      <div class="top-stats">
+        <span>HOY <b id="topToday">$ 0</b></span>
+        <span class="dim">/</span>
+        <span><b id="topCount">0</b> ventas</span>
+        <span class="dim">/</span>
+        <span>STOCK BAJO <b id="topLow" class="warn">0</b></span>
+      </div>
+      <div class="clock">
+        <span id="clockDate">--/--/----</span>
+        <b id="clockTime">--:--:--</b>
+      </div>
+    </header>
+
+    <nav class="tabs" id="tabs" aria-label="Módulos">
+      <button class="tab" data-view="venta"><kbd>F2</kbd> Venta</button>
+      <button class="tab" data-view="productos"><kbd>F3</kbd> Productos</button>
+      <button class="tab" data-view="inventario"><kbd>F5</kbd> Inventario</button>
+      <button class="tab" data-view="cotizaciones"><kbd>F7</kbd> Cotizaciones</button>
+      <button class="tab" data-view="ventas"><kbd>F6</kbd> Ventas</button>
+      <button class="tab" data-view="clientes"><kbd>F8</kbd> Clientes</button>
+      <button class="tab" data-view="reportes"><kbd>F11</kbd> Reportes</button>
+      <button class="tab" data-view="config"><kbd>F10</kbd> Config</button>
+    </nav>
+
+    <main id="main">
+      <!-- ================= VENTA ================= -->
+      <section id="view-venta" class="view active">
+        <div id="quoteBanner" class="quote-banner" hidden>
+          <span>▸ MODO COTIZACIÓN</span>
+          <b id="quoteBannerNum">COT-000001</b>
+          <span class="dim">Se guarda sin descontar inventario</span>
+          <button id="btnCancelQuote" class="btn tiny ghost">Cancelar</button>
+        </div>
+        <div class="sale-grid">
+          <div class="panel sale-main">
+            <div class="searchbar">
+              <span class="prompt">&gt;</span>
+              <input id="saleSearch" autocomplete="off" spellcheck="false"
+                     placeholder="Escanear código o buscar: nombre, código, medida...">
+              <span id="searchQty" class="search-qty" hidden></span>
+              <span class="search-hint">Enter agrega · 3 x cantidad · F4 cobrar</span>
+            </div>
+            <div id="saleResults" class="results" hidden></div>
+
+            <div class="cart-bar">
+              <div class="cart-bar-left">
+                <span id="cartMode" class="mode-badge">VENTA</span>
+                <span id="cartCount">0 ítems</span>
+              </div>
+              <div class="cart-bar-right">
+                Cliente: <b id="cartCustomer">Consumidor final</b>
+                <button id="btnPickCustomer" class="link">[ cambiar ]</button>
+              </div>
+            </div>
+
+            <div class="table-wrap cart-wrap">
+              <table class="data cart-table">
+                <thead>
+                  <tr>
+                    <th class="w-idx">#</th>
+                    <th>Producto</th>
+                    <th class="num">Cant</th>
+                    <th class="num">Precio</th>
+                    <th class="num">Desc</th>
+                    <th class="num">Total</th>
+                    <th class="w-x"></th>
+                  </tr>
+                </thead>
+                <tbody id="cartBody"></tbody>
+              </table>
+              <div id="cartEmpty" class="empty-state">
+                <div class="empty-icon">[ ]</div>
+                <div>Carrito vacío.</div>
+                <small>Escanea un código o busca un producto para empezar.</small>
+              </div>
+            </div>
+          </div>
+
+          <aside class="sale-side">
+            <div class="panel ticket-panel">
+              <div class="panel-title">DOCUMENTO <span id="nextTicket" class="doc-num">T-000001</span></div>
+              <div class="totals">
+                <div class="t-row"><span>Base gravable</span><b id="tSubtotal">$ 0</b></div>
+                <div class="t-row"><span>IVA</span><b id="tTax">$ 0</b></div>
+                <div class="t-row discount-row">
+                  <span>Descuento</span>
+                  <input id="tDiscount" class="mini-input" inputmode="decimal" value="0">
+                </div>
+                <div class="t-total"><span>TOTAL</span><b id="tTotal">$ 0</b></div>
+              </div>
+              <button id="btnCharge" class="btn primary xl">COBRAR <kbd>F4</kbd></button>
+              <button id="btnClearCart" class="btn ghost">Vaciar carrito</button>
+              <div class="mini-note" id="saleHint">Lector de barras listo.</div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-title">ÚLTIMA VENTA</div>
+              <div id="lastSaleBox" class="last-sale">—</div>
+              <button id="btnReprintLast" class="btn small">Reimprimir <kbd>F9</kbd></button>
+            </div>
+
+            <div class="panel help-mini">
+              <div class="panel-title">ATAJOS</div>
+              <div><kbd>Enter</kbd> agregar resaltado</div>
+              <div><kbd>↑</kbd><kbd>↓</kbd> navegar resultados</div>
+              <div><kbd>+</kbd><kbd>−</kbd> cantidad de la línea</div>
+              <div><kbd>Supr</kbd> quitar línea</div>
+              <div><kbd>F1</kbd> ayuda completa</div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ================= PRODUCTOS ================= -->
+      <section id="view-productos" class="view">
+        <div class="view-head">
+          <div class="view-title">PRODUCTOS <span id="prodCount" class="dim"></span></div>
+          <div class="toolbar">
+            <input id="prodSearch" class="search-input" placeholder="Filtrar por nombre, código o medida...">
+            <button id="btnNewProduct" class="btn primary">+ Nuevo <kbd>F3</kbd></button>
+            <button id="btnCatalog" class="btn">Categorías / Unidades</button>
+            <a class="btn" href="/api/export/products.csv">Exportar CSV</a>
+          </div>
+        </div>
+        <div class="panel table-panel fill">
+          <div class="table-wrap">
+            <table class="data">
+              <thead>
+                <tr>
+                  <th>Código</th><th>Producto</th><th>Categoría</th><th>Unidad</th>
+                  <th class="num">Costo</th><th class="num">Precio</th>
+                  <th class="num">Stock</th><th class="num">Mín</th><th>Estado</th><th class="actions-col">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="prodBody"></tbody>
+            </table>
+          </div>
+          <div id="prodEmpty" class="empty-state" hidden>No hay productos que coincidan. Crea el primero con «+ Nuevo».</div>
+        </div>
+      </section>
+
+      <!-- ================= INVENTARIO ================= -->
+      <section id="view-inventario" class="view">
+        <div class="view-head">
+          <div class="view-title">INVENTARIO</div>
+          <div class="toolbar">
+            <input id="invSearch" class="search-input" placeholder="Filtrar inventario...">
+            <label class="check"><input id="invLowOnly" type="checkbox"> Solo bajo mínimo</label>
+            <button id="btnInvRefresh" class="btn">Actualizar</button>
+            <a class="btn" href="/api/export/movements.csv">Exportar kardex</a>
+          </div>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><span>Referencias</span><b id="invProducts">0</b></div>
+          <div class="kpi"><span>Valor a costo</span><b id="invCost">$ 0</b></div>
+          <div class="kpi"><span>Valor a venta</span><b id="invSale">$ 0</b></div>
+          <div class="kpi warn-kpi"><span>Bajo mínimo</span><b id="invLow">0</b></div>
+        </div>
+        <div class="panel table-panel">
+          <div class="panel-title">EXISTENCIAS</div>
+          <div class="table-wrap medium">
+            <table class="data">
+              <thead>
+                <tr><th>Código</th><th>Producto</th><th>Categoría</th><th class="num">Stock</th><th class="num">Mín</th><th class="num">Costo</th><th class="num">Valor</th><th>Estado</th><th class="actions-col">Acciones</th></tr>
+              </thead>
+              <tbody id="invBody"></tbody>
+            </table>
+          </div>
+          <div id="invEmpty" class="empty-state" hidden>Sin existencias para mostrar.</div>
+        </div>
+        <div class="panel table-panel">
+          <div class="panel-title">KARDEX · ÚLTIMOS MOVIMIENTOS</div>
+          <div class="table-wrap medium">
+            <table class="data">
+              <thead>
+                <tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th class="num">Cantidad</th><th class="num">Quedó</th><th>Nota</th></tr>
+              </thead>
+              <tbody id="movBody"></tbody>
+            </table>
+          </div>
+          <div id="movEmpty" class="empty-state" hidden>Sin movimientos todavía.</div>
+        </div>
+      </section>
+
+      <!-- ================= COTIZACIONES ================= -->
+      <section id="view-cotizaciones" class="view">
+        <div class="view-head">
+          <div class="view-title">COTIZACIONES</div>
+          <div class="toolbar">
+            <input id="quoteSearch" class="search-input" placeholder="Buscar número o cliente...">
+            <select id="quoteStatus" class="select">
+              <option value="">Todos los estados</option>
+              <option value="borrador">Borrador</option>
+              <option value="enviada">Enviada</option>
+              <option value="aceptada">Aceptada</option>
+              <option value="convertida">Convertida</option>
+              <option value="vencida">Vencida</option>
+              <option value="anulada">Anulada</option>
+            </select>
+            <button id="btnNewQuote" class="btn primary">+ Nueva cotización</button>
+          </div>
+        </div>
+        <div class="panel table-panel fill">
+          <div class="table-wrap">
+            <table class="data">
+              <thead>
+                <tr><th>Número</th><th>Fecha</th><th>Cliente</th><th>Vigencia</th><th class="num">Total</th><th>Estado</th><th class="actions-col">Acciones</th></tr>
+              </thead>
+              <tbody id="quoteBody"></tbody>
+            </table>
+          </div>
+          <div id="quoteEmpty" class="empty-state" hidden>No hay cotizaciones. Crea una con «+ Nueva cotización».</div>
+        </div>
+      </section>
+
+      <!-- ================= VENTAS ================= -->
+      <section id="view-ventas" class="view">
+        <div class="view-head">
+          <div class="view-title">VENTAS</div>
+          <div class="toolbar">
+            <input id="saleListSearch" class="search-input" placeholder="Ticket o cliente...">
+            <input id="salesFrom" type="date" class="date-input">
+            <span class="dim">a</span>
+            <input id="salesTo" type="date" class="date-input">
+            <button id="btnTodaySales" class="btn tiny">Hoy</button>
+            <button id="btnMonthSales" class="btn tiny">Mes</button>
+            <button id="btnReloadSales" class="btn">Actualizar</button>
+          </div>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><span>Ventas hoy</span><b id="salToday">$ 0</b></div>
+          <div class="kpi"><span>Tickets hoy</span><b id="salTodayCount">0</b></div>
+          <div class="kpi"><span>Ventas del mes</span><b id="salMonth">$ 0</b></div>
+          <div class="kpi"><span>Utilidad hoy</span><b id="salProfit">$ 0</b></div>
+        </div>
+        <div class="panel table-panel fill">
+          <div class="table-wrap">
+            <table class="data">
+              <thead>
+                <tr><th>Ticket</th><th>Fecha</th><th>Cliente</th><th class="num">Ítems</th><th>Pago</th><th class="num">Total</th><th>Estado</th><th class="actions-col">Acciones</th></tr>
+              </thead>
+              <tbody id="salesBody"></tbody>
+            </table>
+          </div>
+          <div id="salesEmpty" class="empty-state" hidden>Sin ventas en el rango seleccionado.</div>
+        </div>
+      </section>
+
+      <!-- ================= CLIENTES ================= -->
+      <section id="view-clientes" class="view">
+        <div class="view-head">
+          <div class="view-title">CLIENTES</div>
+          <div class="toolbar">
+            <input id="customerSearch" class="search-input" placeholder="Nombre, documento o teléfono...">
+            <button id="btnNewCustomer" class="btn primary">+ Nuevo cliente</button>
+          </div>
+        </div>
+        <div class="panel table-panel fill">
+          <div class="table-wrap">
+            <table class="data">
+              <thead>
+                <tr><th>Documento</th><th>Nombre</th><th>Teléfono</th><th>Dirección</th><th>Correo</th><th class="actions-col">Acciones</th></tr>
+              </thead>
+              <tbody id="customerBody"></tbody>
+            </table>
+          </div>
+          <div id="customerEmpty" class="empty-state" hidden>No hay clientes registrados.</div>
+        </div>
+      </section>
+
+      <!-- ================= REPORTES ================= -->
+      <section id="view-reportes" class="view">
+        <div class="view-head">
+          <div class="view-title">REPORTES</div>
+          <div class="toolbar">
+            <input id="reportFrom" type="date" class="date-input">
+            <span class="dim">a</span>
+            <input id="reportTo" type="date" class="date-input">
+            <button id="btnReportRefresh" class="btn primary">Generar</button>
+          </div>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><span>Ventas</span><b id="repTotal">$ 0</b></div>
+          <div class="kpi"><span>Tickets</span><b id="repCount">0</b></div>
+          <div class="kpi"><span>Utilidad</span><b id="repProfit">$ 0</b></div>
+          <div class="kpi"><span>Ticket promedio</span><b id="repAvg">$ 0</b></div>
+        </div>
+        <div class="reports-grid">
+          <div class="panel table-panel">
+            <div class="panel-title">PRODUCTOS MÁS VENDIDOS</div>
+            <div class="table-wrap medium">
+              <table class="data">
+                <thead><tr><th>Código</th><th>Producto</th><th class="num">Cant</th><th class="num">Venta</th><th class="num">Costo</th></tr></thead>
+                <tbody id="repTopBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel table-panel">
+            <div class="panel-title">VENTAS POR DÍA</div>
+            <div class="table-wrap medium">
+              <table class="data">
+                <thead><tr><th>Día</th><th class="num">Tickets</th><th class="num">Total</th><th class="num">Utilidad</th></tr></thead>
+                <tbody id="repDayBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel table-panel">
+            <div class="panel-title">MEDIOS DE PAGO</div>
+            <div class="table-wrap medium">
+              <table class="data">
+                <thead><tr><th>Método</th><th class="num">Tickets</th><th class="num">Total</th></tr></thead>
+                <tbody id="repPayBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel table-panel">
+            <div class="panel-title">STOCK BAJO</div>
+            <div class="table-wrap medium">
+              <table class="data">
+                <thead><tr><th>Código</th><th>Producto</th><th class="num">Stock</th><th class="num">Mín</th></tr></thead>
+                <tbody id="repLowBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= CONFIG ================= -->
+      <section id="view-config" class="view">
+        <div class="view-head">
+          <div class="view-title">CONFIGURACIÓN</div>
+          <div class="toolbar">
+            <button id="btnCatalog2" class="btn">Categorías / Unidades</button>
+            <a class="btn" href="/api/backup">Descargar respaldo</a>
+          </div>
+        </div>
+        <form id="configForm" class="config-grid">
+          <fieldset class="panel config-box">
+            <legend>NEGOCIO</legend>
+            <label>Nombre<input name="store_name"></label>
+            <label>NIT / Cédula<input name="store_doc"></label>
+            <label>Dirección<input name="store_address"></label>
+            <label>Ciudad<input name="store_city"></label>
+            <label>Teléfono<input name="store_phone"></label>
+            <label class="f2">Pie del ticket<input name="store_footer"></label>
+            <label class="f2">Nota legal<textarea name="receipt_note" rows="2"></textarea></label>
+          </fieldset>
+
+          <fieldset class="panel config-box">
+            <legend>IMPUESTOS Y MONEDA</legend>
+            <label>Símbolo<input name="currency"></label>
+            <label>Locale<input name="locale" placeholder="es-CO"></label>
+            <label>IVA por defecto (%)<input name="default_tax_rate" type="number" step="0.01" min="0"></label>
+            <label class="check f2"><input name="prices_include_tax" type="checkbox"> Los precios ya incluyen IVA</label>
+            <label class="f2">Título del ticket<input name="doc_title"></label>
+            <label class="f2">Título de cotización<input name="quote_title"></label>
+          </fieldset>
+
+          <fieldset class="panel config-box">
+            <legend>NUMERACIÓN</legend>
+            <label>Prefijo ticket<input name="ticket_prefix"></label>
+            <label>Dígitos<input name="ticket_pad" type="number" min="1" max="10"></label>
+            <label>Prefijo cotización<input name="quote_prefix"></label>
+            <label>Dígitos<input name="quote_pad" type="number" min="1" max="10"></label>
+            <label>Vigencia cotización (días)<input name="quote_valid_days" type="number" min="1"></label>
+          </fieldset>
+
+          <fieldset class="panel config-box">
+            <legend>IMPRESIÓN 80 MM</legend>
+            <label>Método
+              <select name="print_method">
+                <option value="usb">USB directo (ESC/POS)</option>
+                <option value="browser">Navegador / CUPS</option>
+                <option value="tcp">Red TCP 9100</option>
+              </select>
+            </label>
+            <label>Dispositivo USB<input name="print_device" placeholder="/dev/usb/lp0"></label>
+            <label>IP impresora<input name="print_host" placeholder="192.168.1.50"></label>
+            <label>Puerto<input name="print_port" type="number"></label>
+            <label>Ancho
+              <select name="print_cols">
+                <option value="48">80 mm · 48 columnas</option>
+                <option value="42">58 mm · 42 columnas</option>
+              </select>
+            </label>
+            <label class="check"><input name="cut_paper" type="checkbox"> Cortar papel</label>
+            <label class="check"><input name="auto_print" type="checkbox"> Imprimir al cobrar</label>
+            <label class="check f2"><input name="allow_negative_stock" type="checkbox"> Permitir vender sin stock</label>
+            <div class="f2 printer-status" id="printerStatus">—</div>
+          </fieldset>
+
+          <fieldset class="panel config-box">
+            <legend>INTERFAZ</legend>
+            <label>Color
+              <select name="accent">
+                <option value="copper">Cobre cálido</option>
+                <option value="slate">Pizarra azul</option>
+                <option value="amber">Ámbar suave</option>
+                <option value="paper">Papel claro</option>
+              </select>
+            </label>
+            <label class="check"><input name="scanlines" type="checkbox"> Líneas de monitor</label>
+            <div class="f2 mini-note">Todo se puede usar con teclado o ratón. Los atajos nunca cambian.</div>
+          </fieldset>
+
+          <div class="config-actions">
+            <button type="submit" class="btn primary xl">GUARDAR CONFIGURACIÓN</button>
+            <button type="button" id="btnTestPrint" class="btn">Probar impresión</button>
+            <button type="button" id="btnPreviewPrint" class="btn">Vista previa</button>
+            <a class="btn" href="/api/backup">Respaldo .db</a>
+            <a class="btn" href="/api/export/products.csv">Productos CSV</a>
+            <a class="btn" href="/api/export/movements.csv">Kardex CSV</a>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <footer class="statusbar">
+      <span id="statusMsg">Listo.</span>
+      <span class="status-keys" id="statusKeys"></span>
+      <span id="statusPrinter">IMPRESORA: —</span>
+    </footer>
+  </div>
+
+  <div id="modalRoot"></div>
+  <div id="toasts" aria-live="polite"></div>
+  <div id="printArea" aria-hidden="true"></div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

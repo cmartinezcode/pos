@@ -1,0 +1,14 @@
+{
+  "name": "mostrador",
+  "version": "1.0.0",
+  "description": "POS de consola para tornillería con tickets de 80 mm, cotizaciones e inventario",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=22.5"
+  }
+}
