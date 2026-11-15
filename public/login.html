@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Acceso · Mostrador POS</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      --bg: #191410;
+      --panel: #221b15;
+      --line: #3a2d22;
+      --text: #f0e4d6;
+      --dim: #a5947f;
+      --accent: #c87b45;
+      --accent-2: #e0a170;
+      --red: #e06c5a;
+      font-family: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      background:
+        radial-gradient(1200px 600px at 20% -10%, #2a2018 0%, transparent 60%),
+        radial-gradient(900px 500px at 110% 110%, #241a13 0%, transparent 55%),
+        var(--bg);
+      color: var(--text); padding: 24px;
+    }
+    .card {
+      width: min(420px, 100%); background: var(--panel); border: 1px solid var(--line);
+      border-radius: 14px; padding: 28px 26px 24px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .dot { width: 12px; height: 12px; border-radius: 3px; background: var(--accent); box-shadow: 0 0 18px var(--accent); }
+    .brand b { letter-spacing: .16em; font-size: 14px; }
+    h1 { font-size: 20px; margin: 18px 0 6px; letter-spacing: .04em; }
+    p { margin: 0 0 18px; color: var(--dim); font-size: 12.5px; line-height: 1.6; }
+    label { display: block; font-size: 11px; letter-spacing: .12em; color: var(--dim); margin-bottom: 6px; text-transform: uppercase; }
+    input {
+      width: 100%; padding: 13px 14px; border-radius: 9px; border: 1px solid var(--line);
+      background: #17120e; color: var(--text); font: inherit; font-size: 15px; outline: none;
+    }
+    input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(200,123,69,.15); }
+    button {
+      width: 100%; margin-top: 18px; padding: 13px 16px; border: 0; border-radius: 9px; cursor: pointer;
+      background: linear-gradient(180deg, var(--accent-2), var(--accent)); color: #1a1108;
+      font: inherit; font-weight: 700; letter-spacing: .1em; font-size: 12px; text-transform: uppercase;
+    }
+    button:disabled { opacity: .6; cursor: progress; }
+    .error { min-height: 18px; margin-top: 12px; font-size: 12px; color: var(--red); }
+    .foot { margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--dim); font-size: 10.5px; line-height: 1.7; }
+    .foot code { color: var(--accent-2); }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="brand"><span class="dot"></span><b>MOSTRADOR POS</b></div>
+    <h1>Acceso privado</h1>
+    <p>Ingresa la clave del negocio. La sesión queda abierta en este dispositivo durante 30 días.</p>
+    <form id="loginForm" autocomplete="on">
+      <label for="password">Clave</label>
+      <input id="password" name="password" type="password" autocomplete="current-password"
+             required minlength="1" autofocus placeholder="••••••••">
+      <button type="submit" id="submitBtn">Entrar</button>
+      <div class="error" id="errorBox" role="alert"></div>
+    </form>
+    <div class="foot">
+      Si olvidaste la clave, cámbiala con <code>wrangler secret put INITIAL_PASSWORD</code>
+      (solo funciona si aún no hay una clave guardada) o restaura un respaldo.
+    </div>
+  </main>
+  <script>
+    const form = document.getElementById('loginForm');
+    const input = document.getElementById('password');
+    const errorBox = document.getElementById('errorBox');
+    const submitBtn = document.getElementById('submitBtn');
+
+    async function alreadyIn() {
+      try {
+        const res = await fetch('/api/session', { cache: 'no-store' });
+        if (!res.ok) return false;
+        const data = await res.json();
+        return Boolean(data.authenticated);
+      } catch {
+        return false;
+      }
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      errorBox.textContent = '';
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Entrando...';
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: input.value })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'No se pudo entrar.');
+        window.location.replace('/');
+      } catch (err) {
+        errorBox.textContent = err.message;
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Entrar';
+        input.select();
+      }
+    });
+
+    alreadyIn().then((ok) => {
+      if (ok) window.location.replace('/');
+    });
+  </script>
+</body>
+</html>

@@ -368,6 +368,7 @@
             <legend>IMPUESTOS Y MONEDA</legend>
             <label>Símbolo<input name="currency"></label>
             <label>Locale<input name="locale" placeholder="es-CO"></label>
+            <label>Zona horaria<input name="timezone" placeholder="America/Bogota"></label>
             <label>IVA por defecto (%)<input name="default_tax_rate" type="number" step="0.01" min="0"></label>
             <label class="check f2"><input name="prices_include_tax" type="checkbox"> Los precios ya incluyen IVA</label>
             <label class="f2">Título del ticket<input name="doc_title"></label>
@@ -387,24 +388,19 @@
             <legend>IMPRESIÓN 80 MM</legend>
             <label>Método
               <select name="print_method">
-                <option value="usb">USB directo (ESC/POS)</option>
-                <option value="browser">Navegador / CUPS</option>
-                <option value="tcp">Red TCP 9100</option>
+                <option value="browser">Navegador / CUPS / PDF</option>
               </select>
             </label>
-            <label>Dispositivo USB<input name="print_device" placeholder="/dev/usb/lp0"></label>
-            <label>IP impresora<input name="print_host" placeholder="192.168.1.50"></label>
-            <label>Puerto<input name="print_port" type="number"></label>
             <label>Ancho
               <select name="print_cols">
                 <option value="48">80 mm · 48 columnas</option>
                 <option value="42">58 mm · 42 columnas</option>
               </select>
             </label>
-            <label class="check"><input name="cut_paper" type="checkbox"> Cortar papel</label>
             <label class="check"><input name="auto_print" type="checkbox"> Imprimir al cobrar</label>
             <label class="check f2"><input name="allow_negative_stock" type="checkbox"> Permitir vender sin stock</label>
             <div class="f2 printer-status" id="printerStatus">—</div>
+            <div class="f2 mini-note">El ticket se imprime con el diálogo del navegador (PC o teléfono) y también se puede guardar como PDF.</div>
           </fieldset>
 
           <fieldset class="panel config-box">
@@ -421,11 +417,23 @@
             <div class="f2 mini-note">Todo se puede usar con teclado o ratón. Los atajos nunca cambian.</div>
           </fieldset>
 
+          <fieldset class="panel config-box">
+            <legend>ACCESO Y SESIÓN</legend>
+            <label>Clave actual<input id="pwCurrent" type="password" autocomplete="current-password"></label>
+            <label>Clave nueva (mín. 8)<input id="pwNext" type="password" autocomplete="new-password"></label>
+            <label>Repetir clave nueva<input id="pwRepeat" type="password" autocomplete="new-password"></label>
+            <div class="f2 config-actions">
+              <button type="button" id="btnChangePassword" class="btn">Cambiar clave</button>
+              <button type="button" id="btnLogout" class="btn">Cerrar sesión</button>
+            </div>
+            <div class="f2 mini-note">La clave se guarda cifrada (PBKDF2) en la base. En modo local sin clave este cambio no aplica.</div>
+          </fieldset>
+
           <div class="config-actions">
             <button type="submit" class="btn primary xl">GUARDAR CONFIGURACIÓN</button>
             <button type="button" id="btnTestPrint" class="btn">Probar impresión</button>
             <button type="button" id="btnPreviewPrint" class="btn">Vista previa</button>
-            <a class="btn" href="/api/backup">Respaldo .db</a>
+            <a class="btn" href="/api/backup">Respaldo .sql</a>
             <a class="btn" href="/api/export/products.csv">Productos CSV</a>
             <a class="btn" href="/api/export/movements.csv">Kardex CSV</a>
           </div>

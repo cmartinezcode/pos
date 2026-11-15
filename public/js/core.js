@@ -132,6 +132,10 @@ export async function api(path, { method = 'GET', body, headers = {} } = {}) {
   } else {
     data = await res.text().catch(() => '');
   }
+  if (res.status === 401 && !path.startsWith('/api/login')) {
+    window.location.href = '/login';
+    throw new Error('Sesión expirada. Vuelve a entrar.');
+  }
   if (!res.ok) {
     const message = data && typeof data === 'object' ? data.error : String(data || '');
     throw new Error(message || `Error ${res.status}`);
@@ -325,44 +329,19 @@ export async function printServer(payload) {
 }
 
 export function showReceipt({ text, title = 'Ticket', saleId = null, quoteId = null }) {
-  let printed = false;
   const { close } = openModal({
     title,
     className: 'small',
     html: `<div class="receipt-paper" data-receipt-text>${esc(text)}</div>
       <div class="receipt-actions">
-        <button type="button" class="btn primary" data-print-server>Imprimir 80 mm</button>
-        <button type="button" class="btn" data-print-browser>Navegador / PDF</button>
+        <button type="button" class="btn primary" data-print-browser>Imprimir 80 mm</button>
         <button type="button" class="btn" data-receipt-close>Cerrar</button>
       </div>
-      <div class="mini-note" data-print-note style="text-align:center">Puedes reimprimirlo desde Ventas cuando quieras.</div>`,
+      <div class="mini-note" data-print-note style="text-align:center">Se abre el diálogo de impresión del navegador. También puedes guardar como PDF.</div>`,
     onMount(modal, closeFn) {
-      const note = $('[data-print-note]', modal);
       $('[data-print-browser]', modal).addEventListener('click', () => browserPrint(text));
-      $('[data-print-server]', modal).addEventListener('click', async () => {
-        const btn = $('[data-print-server]', modal);
-        btn.disabled = true;
-        btn.textContent = 'Enviando...';
-        try {
-          await printServer(saleId ? { sale_id: saleId } : quoteId ? { quote_id: quoteId } : { text });
-          printed = true;
-          note.textContent = 'Enviado a la impresora.';
-          note.style.color = 'var(--accent)';
-          toast('Ticket enviado a la impresora.', 'ok');
-        } catch (err) {
-          note.textContent = err.message;
-          note.style.color = 'var(--amber)';
-          toast(err.message, 'error', 5000);
-        } finally {
-          btn.disabled = false;
-          btn.textContent = 'Imprimir 80 mm';
-        }
-      });
       $('[data-receipt-close]', modal).addEventListener('click', () => closeFn());
-      setTimeout(() => $('[data-print-server]', modal)?.focus(), 30);
-    },
-    onClose() {
-      return printed;
+      setTimeout(() => $('[data-print-browser]', modal)?.focus(), 30);
     }
   });
   return close;
@@ -392,8 +371,8 @@ export function renderPrinterStatus() {
   if (!el) return;
   const method = S.printer?.method || S.settings?.print_method || 'usb';
   if (method === 'browser') {
-    el.textContent = 'IMPRESORA: NAVEGADOR / CUPS';
-    el.className = 'bad';
+    el.textContent = 'IMPRESORA: DIÁLOGO DEL NAVEGADOR';
+    el.className = '';
     return;
   }
   if (method === 'tcp') {

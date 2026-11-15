@@ -3,5 +3,7 @@ data/
 *.db-shm
 *.db-wal
 node_modules/
+.wrangler/
 .DS_Store
 *.log
+.dev.vars

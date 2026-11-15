@@ -1,0 +1,5 @@
+# Copia este archivo como .dev.vars y cambia los valores.
+# .dev.vars está ignorado por Git; nunca lo subas al repositorio.
+AUTH_SECRET="cambia-por-una-cadena-larga-y-aleatoria"
+INITIAL_PASSWORD="cambia-esta-clave-de-prueba"
+AUTH_ITERATIONS="10000"

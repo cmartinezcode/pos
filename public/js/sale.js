@@ -4,7 +4,7 @@
 import {
   S, $, $$, esc, parseNum, round2, fmtMoney, fmtQty, fmtDate,
   toast, setStatus, api, openModal, closeModal, confirmDialog, formDialog,
-  showReceipt, printServer, browserPrint, refreshBootstrap, updateHeader,
+  showReceipt, browserPrint, refreshBootstrap, updateHeader,
   switchView, stockClass
 } from './core.js';
 
@@ -13,6 +13,7 @@ const CART_KEY = 'mostrador.cart.v1';
 let cart = [];
 let cartMode = 'sale';
 let customer = null;
+let quoteRequestId = null;
 let editingQuote = null;
 let discount = 0;
 let results = [];
@@ -543,6 +544,7 @@ export function openPaymentModal({ mode = 'sale', quote = null, onDone = null } 
     return;
   }
   let method = 'efectivo';
+  let requestId = null;
   const title = mode === 'convert' ? `Cobrar ${quote.number}` : 'Cobrar venta';
 
   const { close } = openModal({
@@ -631,17 +633,20 @@ export function openPaymentModal({ mode = 'sale', quote = null, onDone = null } 
         }
         confirm.disabled = true;
         confirm.textContent = 'PROCESANDO...';
+        /* Misma clave si el usuario reintenta: el servidor no duplica la venta. */
+        if (!requestId) requestId = crypto.randomUUID();
         try {
           let result;
           if (mode === 'convert') {
             result = await api(`/api/quotes/${quote.id}/convert`, {
               method: 'POST',
-              body: { payment_method: method, received }
+              body: { payment_method: method, received, request_id: requestId }
             });
           } else {
             result = await api('/api/sales', {
               method: 'POST',
               body: {
+                request_id: requestId,
                 items: cart.map((it) => ({
                   product_id: it.product_id,
                   presentation_id: it.presentation_id || null,
@@ -657,6 +662,7 @@ export function openPaymentModal({ mode = 'sale', quote = null, onDone = null } 
               }
             });
           }
+          requestId = null;
           const print = $('#payPrint', modal)?.checked;
           closeFn();
           if (mode === 'sale') resetSaleState();
@@ -669,20 +675,10 @@ export function openPaymentModal({ mode = 'sale', quote = null, onDone = null } 
             title: `Ticket ${sale.number}`
           });
           if (onDone) onDone(result);
-          if (print) {
-            if ((S.settings.print_method || 'usb') === 'browser') {
-              browserPrint(result.receipt);
-            } else {
-              try {
-                await printServer({ sale_id: sale.id });
-                toast('Ticket enviado a la impresora.', 'ok');
-              } catch (err) {
-                toast(`Venta guardada, pero no se imprimió: ${err.message}`, 'warn', 6000);
-              }
-            }
-          }
+          if (print) browserPrint(result.receipt);
           toast(`Venta ${sale.number} registrada por ${fmtMoney(sale.total)}.`, 'ok');
         } catch (err) {
+          requestId = null;
           toast(err.message, 'error', 6000);
           confirm.disabled = false;
           confirm.textContent = mode === 'convert' ? 'CONVERTIR Y COBRAR' : 'CONFIRMAR COBRO';
@@ -753,6 +749,7 @@ async function saveQuoteNow() {
     return;
   }
   const body = {
+    request_id: wasEditing ? undefined : quoteRequestId || (quoteRequestId = crypto.randomUUID()),
     items: cart.map((it) => ({
       product_id: it.product_id,
       presentation_id: it.presentation_id || null,
@@ -770,6 +767,7 @@ async function saveQuoteNow() {
     const result = wasEditing
       ? await api(`/api/quotes/${editingQuote.id}`, { method: 'PUT', body })
       : await api('/api/quotes', { method: 'POST', body });
+    quoteRequestId = null;
     resetSaleState();
     await refreshBootstrap();
     updateHeader();

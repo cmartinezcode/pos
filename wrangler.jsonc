@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mostrador-pos",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-06-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*", "/", "/index.html"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mostrador",
+      // Reemplaza con el id que devuelve: wrangler d1 create mostrador
+      "database_id": "REEMPLAZA_CON_EL_ID_DE_D1",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

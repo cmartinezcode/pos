@@ -3,7 +3,7 @@
    ========================================================= */
 import {
   S, $, esc, toast, setStatus, api, applyTheme, refreshBootstrap, updateHeader,
-  showReceipt, renderPrinterStatus, normalizeTheme
+  showReceipt, browserPrint, renderPrinterStatus, normalizeTheme
 } from './core.js';
 
 const BOOL_FIELDS = ['prices_include_tax', 'cut_paper', 'auto_print', 'allow_negative_stock', 'scanlines'];
@@ -26,16 +26,7 @@ function fillForm() {
 function updatePrinterBox() {
   const box = $('#printerStatus');
   if (!box) return;
-  const method = S.settings.print_method || 'usb';
-  if (method === 'usb') {
-    box.innerHTML = `USB directo: <b>${esc(S.settings.print_device || '/dev/usb/lp0')}</b> ·
-      ${S.printer?.device_exists ? '<span class="stock-ok">detectada</span>' : '<span class="warn">no detectada</span>'}
-      <div class="mini-note" style="margin-top:4px">Si no hay permiso: <code>sudo usermod -aG lp $USER</code> y reinicia sesión.</div>`;
-  } else if (method === 'tcp') {
-    box.innerHTML = `Impresora de red: <b>${esc(S.settings.print_host || '(sin IP)')}:${esc(S.settings.print_port || 9100)}</b>`;
-  } else {
-    box.textContent = 'Navegador / CUPS: imprime desde la vista previa con el diálogo del sistema.';
-  }
+  box.innerHTML = 'Navegador / CUPS: el ticket se imprime con el diálogo del sistema y también se puede guardar como PDF.';
 }
 
 async function refreshPrinterStatus() {
@@ -85,8 +76,9 @@ async function testPrint() {
   btn.disabled = true;
   btn.textContent = 'PROBANDO...';
   try {
-    await api('/api/print/test', { method: 'POST' });
-    toast('Ticket de prueba enviado a la impresora.', 'ok');
+    const data = await api('/api/print/test', { method: 'POST' });
+    browserPrint(data.text);
+    toast('Abre el diálogo de impresión del navegador.', 'ok');
   } catch (err) {
     toast(err.message, 'error', 7000);
   } finally {
@@ -108,7 +100,49 @@ export function initConfig() {
   $('#configForm')?.addEventListener('submit', saveConfig);
   $('#btnTestPrint')?.addEventListener('click', testPrint);
   $('#btnPreviewPrint')?.addEventListener('click', previewPrint);
+  $('#btnChangePassword')?.addEventListener('click', changeAccessPassword);
+  $('#btnLogout')?.addEventListener('click', logoutSession);
   $('#configForm')?.elements?.print_device?.addEventListener('change', updatePrinterBox);
+}
+
+async function changeAccessPassword() {
+  const current = $('#pwCurrent')?.value || '';
+  const next = $('#pwNext')?.value || '';
+  const repeat = $('#pwRepeat')?.value || '';
+  if (!current || !next) {
+    toast('Escribe la clave actual y la nueva.', 'warn');
+    return;
+  }
+  if (next.length < 8) {
+    toast('La clave nueva debe tener al menos 8 caracteres.', 'warn');
+    return;
+  }
+  if (next !== repeat) {
+    toast('Las claves nuevas no coinciden.', 'warn');
+    return;
+  }
+  const btn = $('#btnChangePassword');
+  btn.disabled = true;
+  try {
+    await api('/api/password', { method: 'PUT', body: { current, next } });
+    $('#pwCurrent').value = '';
+    $('#pwNext').value = '';
+    $('#pwRepeat').value = '';
+    toast('Clave actualizada.', 'ok');
+  } catch (err) {
+    toast(err.message, 'error', 6000);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function logoutSession() {
+  try {
+    await api('/api/logout', { method: 'POST' });
+  } catch {
+    /* la sesión pudo expirar */
+  }
+  window.location.href = '/login';
 }
 
 export async function loadConfigView() {

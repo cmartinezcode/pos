@@ -1,7 +1,6 @@
-
 {
   "name": "mostrador-pos",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "main": "server.js",
@@ -11,6 +10,16 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "build": "node --check server.js && node --check db.js && node --check seed.js"
+    "check": "node --check server.js && node --check db.js && node --check src/app.js && node --check src/auth.js && node --check src/store.js && node --check src/worker.js && node --check src/db.node.js && node --check src/db.d1.js",
+    "build": "npm run check",
+    "seed:dump": "node scripts/export-seed.mjs",
+    "db:init": "node scripts/init-db.mjs",
+    "cf:dev": "wrangler dev",
+    "cf:deploy": "wrangler deploy",
+    "cf:migrate": "wrangler d1 migrations apply mostrador --remote",
+    "cf:migrate:local": "wrangler d1 migrations apply mostrador --local"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
   }
 }
